@@ -1,0 +1,24 @@
+{
+  "domainTest": {
+    "title": "تست دامنه",
+    "description": "دامنه موردنظر خود را وارد کنید تا بررسی کنیم کدام سرورهای DNS می‌توانند آن را با موفقیت باز کنند.",
+    "inputPlaceholder": "مثلا spotify.com",
+    "checkButton": "بررسی DNS ها",
+    "checkingButton": "در حال بررسی...",
+    "resultsTitle": "نتایج تست",
+    "usable": "قابل استفاده",
+    "blocked": "مسدود شده",
+    "noUsableDns": "متأسفانه هیچ سرور DNS قابل استفاده‌ای یافت نشد",
+    "checkInternet": "لطفا اتصال اینترنت خود را بررسی کرده و مجدداً تلاش کنید.",
+    "retry": "تست مجدد",
+    "allDnsAvailable": "همه DNS های بررسی‌شده در دسترس هستند",
+    "moreItems": "موارد بیشتر",
+    "enterDomainError": "لطفاً یک دامنه وارد کنید",
+    "invalidDomainError": "لطفاً فقط نام دامنه وارد کنید (مثلا: google.com)",
+    "gotIt": "متوجه شدم"
+  },
+  "layout": {
+    "title": "برگُزین",
+    "subtitle": "انتخاب بهترین گزینه"
+  }
+}

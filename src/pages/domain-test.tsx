@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import XIcon from "../components/svg/x-icon";
 import CheckIcon from "../components/svg/check-icon";
 import Retry from "../components/svg/retry";
+import { useTranslation } from "react-i18next";
 
 interface DnsTestResult {
   dns_server: string;
@@ -20,6 +21,7 @@ interface DnsTestResult {
 }
 
 export default function DomainTest() {
+  const { t } = useTranslation();
   const { showInfo, showError } = useAlertHelpers();
   const { hideAlert } = useAlert();
   const leftColumnRef = useRef<HTMLDivElement>(null);
@@ -114,7 +116,7 @@ export default function DomainTest() {
 
   const handleDnsTest = async () => {
     if (!domain.trim()) {
-      toast.error("لطفاً یک دامنه وارد کنید", {
+      toast.error(t("domainTest.enterDomainError"), {
         position: "top-left",
         className: "text-right dir-fa",
       });
@@ -129,7 +131,7 @@ export default function DomainTest() {
       trimmedDomain.includes("?") ||
       trimmedDomain.includes("#")
     ) {
-      toast.error("لطفاً فقط نام دامنه وارد کنید (مثلا: google.com)", {
+      toast.error(t("domainTest.invalidDomainError"), {
         position: "top-left",
         className: "dir-fa text-right",
       });
@@ -175,11 +177,11 @@ export default function DomainTest() {
             className="cursor-pointer"
             onClick={() =>
               showInfo(
-                "دامنه موردنظر خود را وارد کنید تا بررسی کنیم کدام سرورهای DNS می‌توانند آن را با موفقیت باز کنند.",
+                t("domainTest.description"),
                 {
                   buttons: [
                     {
-                      label: "متوجه شدم",
+                      label: t("domainTest.gotIt"),
                       action: () => {
                         hideAlert("docker-image-validation-error");
                       },
@@ -192,7 +194,7 @@ export default function DomainTest() {
           >
             <Question className="w-5 h-5" />
           </button>
-          دامنه مورد نظر
+          {t("domainTest.title")}
         </p>
         <div className="mb-4 relative">
           {/* Progress Bar Background */}
@@ -217,7 +219,7 @@ export default function DomainTest() {
             onChange={(e) => setDomain(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && handleDnsTest()}
             className="bg-[#30363D] border border-[#6B7280] rounded-md p-4 text-sm w-full text-right dir-fa focus:outline-none focus:border-[#8B9DC3] relative z-10"
-            placeholder="مثلا spotify.com"
+            placeholder={t("domainTest.inputPlaceholder")}
             disabled={isLoading}
             autoCorrect="off"
             autoComplete="off"
@@ -240,15 +242,15 @@ export default function DomainTest() {
           >
             <Search />
             {isLoading || (totalResults > 0 && totalResults < totalExpected)
-              ? "در حال بررسی..."
-              : "بررسی DNS ها"}
+              ? t("domainTest.checkingButton")
+              : t("domainTest.checkButton")}
           </button>
         </div>
       </div>
 
       {/* Results Section - Takes remaining space */}
       <div className="flex-1 flex flex-col min-h-0">
-        <p className="text-center">نتایج تست</p>
+        <p className="text-center">{t("domainTest.resultsTitle")}</p>
 
         {(totalResults > 0 || isCompleted) && (
           <div className="grid grid-cols-2 gap-4 flex-1 min-h-0 dir-fa">
@@ -256,7 +258,7 @@ export default function DomainTest() {
             <div className="relative flex flex-col overflow-auto">
               <div className="mb-2 text-center flex-shrink-0">
                 <span className="text-green-400 text-sm font-medium">
-                  قابل استفاده ({usableResults.length})
+                  {t("domainTest.usable")} ({usableResults.length})
                 </span>
               </div>
               <div
@@ -276,17 +278,17 @@ export default function DomainTest() {
                   <div className="flex flex-col items-center justify-center h-full text-gray-400 text-center">
                     <XIcon />
                     <p className="text-[#F85149] mt-4">
-                      متأسفانه هیچ سرور DNS قابل استفاده‌ای یافت نشد
+                      {t("domainTest.noUsableDns")}
                     </p>
                     <p className="mt-2">
-                      لطفا اتصال اینترنت خود را بررسی کرده و مجدداً تلاش کنید.
+                      {t("domainTest.checkInternet")}
                     </p>
                     <button
                       onClick={handleDnsTest}
                       className="flex gap-2 mt-2 cursor-pointer text-white hover:text-[#848484] transition-colors duration-200 shadow-lg dir-fa items-center justify-center px-4 py-2 rounded-lg text-sm font-medium"
                     >
                       <Retry />
-                      تست مجدد
+                      {t("domainTest.retry")}
                     </button>
                   </div>
                 )}
@@ -304,7 +306,7 @@ export default function DomainTest() {
                       className="text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 shadow-lg dir-fa flex items-center gap-2"
                     >
                       <DoubleChevronDown />
-                      موارد بیشتر
+                      {t("domainTest.moreItems")}
                     </button>
                   </div>
                 </>
@@ -315,7 +317,7 @@ export default function DomainTest() {
             <div className="relative flex flex-col overflow-auto">
               <div className="mb-2 text-center flex-shrink-0">
                 <span className="text-red-400 text-sm font-medium">
-                  مسدود شده ({unusableResults.length})
+                  {t("domainTest.blocked")} ({unusableResults.length})
                 </span>
               </div>
               <div
@@ -335,7 +337,7 @@ export default function DomainTest() {
                   <div className="flex items-center justify-center h-full text-gray-400">
                     <CheckIcon />
                     <p className="text-[#3FB950]">
-                      همه DNS های بررسی‌شده در دسترس هستند
+                      {t("domainTest.allDnsAvailable")}
                     </p>
                   </div>
                 )}
@@ -353,7 +355,7 @@ export default function DomainTest() {
                       className="text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 shadow-lg dir-fa flex items-center gap-2"
                     >
                       <DoubleChevronDown />
-                      موارد بیشتر
+                      {t("domainTest.moreItems")}
                     </button>
                   </div>
                 </>
