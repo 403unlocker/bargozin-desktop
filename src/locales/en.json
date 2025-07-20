@@ -1,0 +1,24 @@
+{
+  "domainTest": {
+    "title": "Domain Test",
+    "description": "Enter the domain you want to check to see which DNS servers can resolve it successfully.",
+    "inputPlaceholder": "e.g. spotify.com",
+    "checkButton": "Check DNS",
+    "checkingButton": "Checking...",
+    "resultsTitle": "Test Results",
+    "usable": "Usable",
+    "blocked": "Blocked",
+    "noUsableDns": "Unfortunately, no usable DNS server was found.",
+    "checkInternet": "Please check your internet connection and try again.",
+    "retry": "Retry",
+    "allDnsAvailable": "All checked DNS servers are available.",
+    "moreItems": "More items",
+    "enterDomainError": "Please enter a domain",
+    "invalidDomainError": "Please enter only the domain name (e.g., google.com)",
+    "gotIt": "Got it"
+  },
+  "layout": {
+    "title": "Bargozin",
+    "subtitle": "Choosing the best option"
+  }
+}
