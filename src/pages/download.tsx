@@ -249,7 +249,7 @@ export default function Download() {
             type="text"
             value={downloadUrl}
             onChange={(e) => setDownloadUrl(e.target.value)}
-            onKeyPress={(e) => {
+            onKeyDown={(e) => {
               if (e.key === "Enter") {
                 handleDownloadTest();
               }

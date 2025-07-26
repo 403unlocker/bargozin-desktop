@@ -199,11 +199,10 @@ export default function DomainTest() {
           {(totalResults > 0 || isLoading) && (
             <div className="absolute inset-0 rounded-md overflow-hidden">
               <div
-                className={`h-full bg-green-500/25 transition-all duration-300 ${
-                  totalResults > 0 && totalResults < totalExpected
+                className={`h-full bg-green-500/25 transition-all duration-300 ${totalResults > 0 && totalResults < totalExpected
                     ? "pulse-effect"
                     : ""
-                }`}
+                  }`}
                 style={{
                   width: `${(totalResults / totalExpected) * 100}%`,
                 }}
@@ -215,7 +214,7 @@ export default function DomainTest() {
             type="text"
             value={domain}
             onChange={(e) => setDomain(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && handleDnsTest()}
+            onKeyDown={(e) => e.key === "Enter" && handleDnsTest()}
             className="bg-[#30363D] border border-[#6B7280] rounded-md p-4 text-sm w-full text-right dir-fa focus:outline-none focus:border-[#8B9DC3] relative z-10"
             placeholder="مثلا spotify.com"
             disabled={isLoading}

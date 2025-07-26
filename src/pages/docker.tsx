@@ -232,7 +232,7 @@ export default function Docker() {
             type="text"
             value={domain}
             onChange={(e) => setDomain(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && handleDockerRegistryTest()}
+            onKeyDown={(e) => e.key === "Enter" && handleDockerRegistryTest()}
             className="bg-[#30363D] border border-[#6B7280] rounded-md p-4 text-sm w-full text-right dir-fa focus:outline-none focus:border-[#8B9DC3] relative z-10"
             placeholder="مثلا ubuntu:latest"
             disabled={isLoading}
