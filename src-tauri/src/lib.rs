@@ -2,6 +2,7 @@ mod dns;
 mod docker;
 mod commands;
 mod utils;
+mod system_dns;
 
 pub use dns::{DnsTestResult, DownloadSpeedResult};
 pub use commands::*;
