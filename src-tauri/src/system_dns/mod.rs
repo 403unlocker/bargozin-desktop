@@ -83,5 +83,8 @@ pub fn exists(dns: DNSEntry) -> Result<bool, SystemDNSError> {
 }
 
 pub fn is_supported() -> bool {
-    get() != Err(SystemDNSError::NotSupported)
+    if let Err(SystemDNSError::NotSupported) = get() {
+        return false;
+    }
+    true
 }
