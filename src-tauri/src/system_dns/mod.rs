@@ -39,7 +39,7 @@ pub trait SystemDNS {
 
 pub fn set(dns: Vec<DNSEntry>) -> Result<(), SystemDNSError> {
     #[cfg(target_os = "macos")]
-    return macos::SystemDNSLinux::set(dns);
+    return macos::SystemDNSMacos::set(dns);
     #[cfg(target_os = "linux")]
     return linux::SystemDNSLinux::set(dns);
     #[cfg(target_os = "windows")]
@@ -48,7 +48,7 @@ pub fn set(dns: Vec<DNSEntry>) -> Result<(), SystemDNSError> {
 
 pub fn get() -> Result<Vec<DNSEntry>, SystemDNSError> {
     #[cfg(target_os = "macos")]
-    return macos::SystemDNSLinux::get();
+    return macos::SystemDNSMacos::get();
     #[cfg(target_os = "linux")]
     return linux::SystemDNSLinux::get();
     #[cfg(target_os = "windows")]
@@ -57,7 +57,7 @@ pub fn get() -> Result<Vec<DNSEntry>, SystemDNSError> {
 
 pub fn add(dns: DNSEntry) -> Result<(), SystemDNSError> {
     #[cfg(target_os = "macos")]
-    return macos::SystemDNSLinux::add(dns);
+    return macos::SystemDNSMacos::add(dns);
     #[cfg(target_os = "linux")]
     return linux::SystemDNSLinux::add(dns);
     #[cfg(target_os = "windows")]
@@ -66,7 +66,7 @@ pub fn add(dns: DNSEntry) -> Result<(), SystemDNSError> {
 
 pub fn add_all(dns: Vec<DNSEntry>) -> Result<(), SystemDNSError> {
     #[cfg(target_os = "macos")]
-    return macos::SystemDNSLinux::add_all(dns);
+    return macos::SystemDNSMacos::add_all(dns);
     #[cfg(target_os = "linux")]
     return linux::SystemDNSLinux::add_all(dns);
     #[cfg(target_os = "windows")]
@@ -75,7 +75,7 @@ pub fn add_all(dns: Vec<DNSEntry>) -> Result<(), SystemDNSError> {
 
 pub fn exists(dns: DNSEntry) -> Result<bool, SystemDNSError> {
     #[cfg(target_os = "macos")]
-    return macos::SystemDNSLinux::exists(dns);
+    return macos::SystemDNSMacos::exists(dns);
     #[cfg(target_os = "linux")]
     return linux::SystemDNSLinux::exists(dns);
     #[cfg(target_os = "windows")]
@@ -84,14 +84,4 @@ pub fn exists(dns: DNSEntry) -> Result<bool, SystemDNSError> {
 
 pub fn is_supported() -> bool {
     get() != Err(SystemDNSError::NotSupported)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn not_supported() {
-        assert!(is_supported() == false);
-    }
 }
