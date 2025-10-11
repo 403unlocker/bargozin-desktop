@@ -1,10 +1,10 @@
-use crate::system_dns::{error::SystemDNSError, SystemDNS};
+use crate::system_dns::{error::SystemDNSError, DNSEntry, SystemDNS};
 use std::process::Command;
 
 pub(super) struct SystemDNSMacos;
 
 impl SystemDNS for SystemDNSMacos {
-    fn set(dns: Vec<super::DNSEntry>) -> Result<(), super::error::SystemDNSError> {
+    fn set(dns: Vec<DNSEntry>) -> Result<(), SystemDNSError> {
         let interface = "Wi-Fi".to_string();
         let mut args: Vec<String> = vec!["-setdnsservers".to_string(), interface];
         args.extend(dns);
@@ -20,7 +20,7 @@ impl SystemDNS for SystemDNSMacos {
         }
     }
 
-    fn get() -> Result<Vec<super::DNSEntry>, super::error::SystemDNSError> {
+    fn get() -> Result<Vec<DNSEntry>, SystemDNSError> {
         let interface = "Wi-Fi";
 
         let output = Command::new("networksetup")

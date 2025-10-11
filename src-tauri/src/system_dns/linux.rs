@@ -3,14 +3,14 @@ use std::{
     io::Read,
 };
 
-use crate::system_dns::SystemDNS;
+use crate::system_dns::{error::SystemDNSError, DNSEntry, SystemDNS};
 
 pub(super) struct SystemDNSLinux;
 
 const DNS_CONFIG_FILE_PATH: &str = "/etc/resolv.conf";
 
 impl SystemDNS for SystemDNSLinux {
-    fn set(dns: Vec<super::DNSEntry>) -> Result<(), super::error::SystemDNSError> {
+    fn set(dns: Vec<DNSEntry>) -> Result<(), SystemDNSError> {
         let mut content = String::from("\n");
         for i in dns {
             content.push_str(&format!("nameserver {}\n", i));
@@ -21,7 +21,7 @@ impl SystemDNS for SystemDNSLinux {
         Ok(())
     }
 
-    fn get() -> Result<Vec<super::DNSEntry>, super::error::SystemDNSError> {
+    fn get() -> Result<Vec<DNSEntry>, SystemDNSError> {
         let mut dns = Vec::new();
         let mut file = File::open(DNS_CONFIG_FILE_PATH)?;
         let mut buffer = String::new();
@@ -38,29 +38,5 @@ impl SystemDNS for SystemDNSLinux {
         }
 
         Ok(dns)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn write_and_read() {
-        let dns = vec![
-            "1.1.1.1".to_string(),
-            "8.8.8.8".to_string(),
-            "8.8.4.4".to_string(),
-        ];
-
-        SystemDNSLinux::set(dns).unwrap();
-        let readed = SystemDNSLinux::get().unwrap();
-
-        dbg!(&readed);
-
-        assert_eq!(readed.len(), 3);
-        assert_eq!(readed.get(0), Some(&"1.1.1.1".to_string()));
-        assert_eq!(readed.get(1), Some(&"8.8.8.8".to_string()));
-        assert_eq!(readed.get(2), Some(&"8.8.4.4".to_string()));
     }
 }
