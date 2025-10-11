@@ -10,5 +10,5 @@ run-dev:
 	bun run tauri dev
 
 test:
-	cd src-tauri
-	cargo test
+	cd src-tauri && cargo test
+	
