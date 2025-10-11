@@ -228,7 +228,9 @@ export default function DomainTest() {
                 ref={rightColumnRef}
                 className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 pb-4"
               >
-                {usableResults.map((result, index) => (
+                {usableResults
+                .sort((a, b) => (a.response_time ?? 1000) - (b.response_time ?? 1000))
+                .map((result, index) => (
                   <TestResultItem
                     key={`usable-${index}`}
                     dns={result.dns_server}
