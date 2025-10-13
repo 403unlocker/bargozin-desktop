@@ -54,7 +54,6 @@ export default function DomainTest() {
 
       if (result.status) {
         setUsableResults((prev) => [...prev, result]);
-        setTimeout(() => scrollToBottom(rightColumnRef), 100);
       } else {
         setUnusableResults((prev) => [...prev, result]);
         setTimeout(() => scrollToBottom(leftColumnRef), 100);
@@ -229,16 +228,16 @@ export default function DomainTest() {
                 className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 pb-4"
               >
                 {usableResults
-                .sort((a, b) => (a.response_time ?? 1000) - (b.response_time ?? 1000))
-                .map((result, index) => (
-                  <TestResultItem
-                    key={`usable-${index}`}
-                    dns={result.dns_server}
-                    status={result.status}
-                    responseTime={result.response_time}
-                    errorMessage={result.error_message}
-                  />
-                ))}
+                  .sort((a, b) => (a.response_time ?? 1000) - (b.response_time ?? 1000))
+                  .map((result, index) => (
+                    <TestResultItem
+                      key={`usable-${index}`}
+                      dns={result.dns_server}
+                      status={result.status}
+                      responseTime={result.response_time}
+                      errorMessage={result.error_message}
+                    />
+                  ))}
                 {usableResults.length === 0 && isCompleted && (
                   <div className="flex flex-col items-center justify-center h-full text-gray-400 text-center">
                     <XIcon />
