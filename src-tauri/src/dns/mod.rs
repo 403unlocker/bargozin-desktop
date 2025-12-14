@@ -5,9 +5,7 @@ use trust_dns_resolver::TokioAsyncResolver;
 use serde::{Deserialize, Serialize};
 use reqwest::Client;
 use std::net::SocketAddr;
-use std::sync::Arc;
 use url::Url;
-use reqwest::dns::{Resolve, Resolving, Name, Addrs};
 use futures_util::StreamExt;
 
 // Original DNS servers constants
@@ -79,68 +77,89 @@ pub fn ensure_https_url(input: &str) -> Option<Url> {
     Url::parse(&format!("https://{}/", clean)).ok()
 }
 
-// Custom DNS resolver that uses a specific DNS server
-struct CustomDnsResolver {
-    resolver: TokioAsyncResolver,
-}
-
-impl CustomDnsResolver {
-    fn new(dns_ip: &str) -> Option<Self> {
-        let socket_addr = format!("{}:53", dns_ip).parse::<SocketAddr>().ok()?;
-        
-        let resolver_config = ResolverConfig::from_parts(
-            None,
-            vec![],
-            vec![NameServerConfig {
-                socket_addr,
-                protocol: Protocol::Udp,
-                tls_dns_name: None,
-                trust_negative_responses: true,
-                bind_addr: None,
-            }],
-        );
-
-        let resolver = TokioAsyncResolver::tokio(resolver_config, ResolverOpts::default());
-        Some(Self { resolver })
-    }
-}
-
-impl Resolve for CustomDnsResolver {
-    fn resolve(&self, name: Name) -> Resolving {
-        let resolver = self.resolver.clone();
-        Box::pin(async move {
-            let response = resolver.lookup_ip(name.as_str()).await
-                .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
-            
-            let addrs: Vec<SocketAddr> = response
-                .iter()
-                .map(|ip| SocketAddr::new(ip, 443))  // Always use 443 for HTTPS URLs
-                .collect();
-            
-            let addrs: Addrs = Box::new(addrs.into_iter());
-            Ok(addrs)
-        })
-    }
-}
-
+// Simpler approach: manually resolve DNS, then use reqwest's .resolve() method
 pub async fn check_url_with_custom_dns(url: &Url, dns_ip: &str) -> Option<(u16, String)> {
-    let resolver = CustomDnsResolver::new(dns_ip)?;
+    println!("Testing URL: {} with DNS: {}", url, dns_ip);
     
-    let client = Client::builder()
-        .dns_resolver(Arc::new(resolver))
+    // Get the hostname from the URL
+    let host = url.host_str()?;
+    println!("Resolving hostname: {} using DNS: {}", host, dns_ip);
+    
+    let socket_addr: SocketAddr = format!("{}:53", dns_ip).parse().ok()?;
+    let nameserver = NameServerConfig {
+        socket_addr,
+        protocol: Protocol::Udp,
+        tls_dns_name: None,
+        bind_addr: None,
+        trust_negative_responses: false,
+    };
+
+    let resolver_config = ResolverConfig::from_parts(None, vec![], vec![nameserver]);
+    let mut resolver_opts = ResolverOpts::default();
+    resolver_opts.timeout = Duration::from_secs(5);
+    resolver_opts.attempts = 2;
+    
+    let resolver = TokioAsyncResolver::tokio(resolver_config, resolver_opts);
+
+    // Resolve the hostname to an IP address
+    let lookup_result = match resolver.lookup_ip(host).await {
+        Ok(result) => result,
+        Err(e) => {
+            println!("DNS resolution failed for {} using DNS {}: {:?}", host, dns_ip, e);
+            return None;
+        }
+    };
+
+    let resolved_ip = match lookup_result.iter().next() {
+        Some(ip) => ip,
+        None => {
+            println!("No IP addresses found for {} using DNS {}", host, dns_ip);
+            return None;
+        }
+    };
+
+    println!("DNS resolution successful: {} -> {} (using DNS {})", host, resolved_ip, dns_ip);
+
+    // Determine the port based on the URL scheme
+    let port = match url.scheme() {
+        "https" => 443,
+        "http" => 80,
+        _ => {
+            println!("Unsupported URL scheme: {}", url.scheme());
+            return None;
+        }
+    };
+
+    let socket_addr = SocketAddr::new(resolved_ip, port);
+
+    // Build HTTP client with the resolved IP address
+    // The .resolve() method tells reqwest to use this specific IP for this hostname
+    let client = match Client::builder()
         .danger_accept_invalid_certs(true)
         .timeout(Duration::from_secs(10))
         .user_agent("Mozilla/5.0 (compatible; Bargozin-DNS-Tester)")
+        .resolve(host, socket_addr)  // Map hostname to resolved IP
         .build()
-        .ok()?;
+    {
+        Ok(c) => c,
+        Err(e) => {
+            println!("Failed to build HTTP client: {:?}", e);
+            return None;
+        }
+    };
 
+    // Make the HTTP request
     match client.get(url.as_str()).send().await {
         Ok(res) => {
             let code = res.status().as_u16();
             let msg = res.status().canonical_reason().unwrap_or("Unknown").to_string();
+            println!("HTTP request succeeded: {} - {} {} (DNS: {})", host, code, msg, dns_ip);
             Some((code, msg))
         }
-        Err(_) => None
+        Err(e) => {
+            println!("HTTP request failed for {} using DNS {}: {:?}", host, dns_ip, e);
+            None
+        }
     }
 }
 
