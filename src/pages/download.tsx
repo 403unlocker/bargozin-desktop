@@ -24,7 +24,7 @@ interface DownloadSpeedResult {
 export default function Download() {
   const [isLoading, setIsLoading] = useState(false);
   const [totalResults, setTotalResults] = useState(0);
-  const [totalExpected] = useState(26);
+  const [totalExpected] = useState(27);
   const [isCompleted, setIsCompleted] = useState(false);
   const [usableResults, setUsableResults] = useState<DownloadSpeedResult[]>([]);
   const [downloadTime, setDownloadTime] = useState(10);

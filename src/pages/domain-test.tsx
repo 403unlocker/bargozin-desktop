@@ -129,7 +129,7 @@ export default function DomainTest() {
   };
 
   const totalResults = usableResults.length + unusableResults.length;
-  const totalExpected = 26; // Total number of DNS servers
+  const totalExpected = 27; // Total number of DNS servers
 
   return (
     <div className="text-right h-full flex flex-col pr-[35px]">
