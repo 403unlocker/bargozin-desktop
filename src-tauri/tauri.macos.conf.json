@@ -1,11 +1,20 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Bargozin",
+  "identifier": "com.bargozin.app",
+  "version": "0.1.2",
   "app": {
     "windows": [
       {
-        "titleBarStyle": "Overlay",
-        "hiddenTitle": true
+        "title": "Bargozin",
+        "width": 1246,
+        "height": 740,
+        "minWidth": 1246,
+        "minHeight": 740
       }
-    ]
+    ],
+    "security": {
+      "csp": null
+    }
   }
 }

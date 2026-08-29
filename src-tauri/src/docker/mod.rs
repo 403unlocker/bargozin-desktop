@@ -1,14 +1,14 @@
-use std::time::{Duration, Instant};
-use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
-use tokio::fs::File;
-use tokio::io::AsyncWriteExt;
 use anyhow::Result;
 use regex::Regex;
+use serde::{Deserialize, Serialize};
 use std::io::Read;
+use std::path::PathBuf;
+use std::time::{Duration, Instant};
+use tokio::fs::File;
+use tokio::io::AsyncWriteExt;
 
 mod get_manifest;
-use get_manifest::{fetch_tag_manifest, fetch_digest_manifest};
+use get_manifest::{fetch_digest_manifest, fetch_tag_manifest};
 
 pub const DOCKER_CONFIG_URL: &str = "https://raw.githubusercontent.com/403unlocker/403Unlocker-cli/refs/heads/main/config/dockerRegistry.yml";
 
@@ -22,17 +22,6 @@ pub struct DockerRegistryTestResult {
     pub test_duration_seconds: f64,
     pub error_message: Option<String>,
     pub session_id: u64,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct DockerRegistryBulkTestResult {
-    pub image_name: String,
-    pub total_registries: usize,
-    pub successful_tests: Vec<DockerRegistryTestResult>,
-    pub failed_tests: Vec<DockerRegistryTestResult>,
-    pub test_duration_ms: u64,
-    pub best_registry: Option<String>,
-    pub best_speed_mbps: f64,
 }
 
 // Config management functions
@@ -63,8 +52,9 @@ pub async fn download_docker_config_file(url: &str, path: &PathBuf) -> Result<()
             response.into_reader().read_to_end(&mut buffer)?;
             Ok(buffer)
         }
-    }).await??;
-    
+    })
+    .await??;
+
     if let Some(parent) = path.parent() {
         tokio::fs::create_dir_all(parent).await?;
     }
@@ -85,7 +75,7 @@ pub fn validate_docker_image_name(image_name: &str) -> bool {
 pub fn download_with_ureq(url: &str, max_duration: Duration) -> Result<u64> {
     let start_time = Instant::now();
     println!("Starting download from: {}", url);
-    
+
     let agent = crate::proxy::apply_ureq_proxy(
         ureq::AgentBuilder::new()
             .timeout(max_duration)
@@ -94,7 +84,7 @@ pub fn download_with_ureq(url: &str, max_duration: Duration) -> Result<u64> {
     .build();
 
     let response = agent.get(url).call()?;
-    
+
     if response.status() != 200 {
         return Err(anyhow::anyhow!("HTTP error: {}", response.status()));
     }
@@ -109,7 +99,11 @@ pub fn download_with_ureq(url: &str, max_duration: Duration) -> Result<u64> {
         // Check timeout
         let elapsed = start_time.elapsed();
         if elapsed >= max_duration {
-            println!("Download timeout reached after {} seconds, downloaded {} bytes", elapsed.as_secs_f64(), total_bytes);
+            println!(
+                "Download timeout reached after {} seconds, downloaded {} bytes",
+                elapsed.as_secs_f64(),
+                total_bytes
+            );
             break;
         }
 
@@ -124,15 +118,24 @@ pub fn download_with_ureq(url: &str, max_duration: Duration) -> Result<u64> {
 
                 // Log progress every second
                 if last_log_time.elapsed() >= Duration::from_secs(1) {
-                    let speed_mbps = (total_bytes as f64 * 8.0) / (elapsed.as_secs_f64() * 1_000_000.0);
-                    println!("Downloaded {} bytes in {:.1}s, speed: {:.2} Mbps", total_bytes, elapsed.as_secs_f64(), speed_mbps);
+                    let speed_mbps =
+                        (total_bytes as f64 * 8.0) / (elapsed.as_secs_f64() * 1_000_000.0);
+                    println!(
+                        "Downloaded {} bytes in {:.1}s, speed: {:.2} Mbps",
+                        total_bytes,
+                        elapsed.as_secs_f64(),
+                        speed_mbps
+                    );
                     last_log_time = Instant::now();
                 }
             }
             Err(e) => {
                 // If we downloaded some data before the error, consider it a success
                 if total_bytes > 0 {
-                    println!("Download interrupted after downloading {} bytes: {}", total_bytes, e);
+                    println!(
+                        "Download interrupted after downloading {} bytes: {}",
+                        total_bytes, e
+                    );
                     break;
                 } else {
                     return Err(anyhow::anyhow!("Download failed: {}", e));
@@ -147,8 +150,13 @@ pub fn download_with_ureq(url: &str, max_duration: Duration) -> Result<u64> {
     } else {
         0.0
     };
-    
-    println!("Download completed: {} bytes in {:.2}s, final speed: {:.2} Mbps", total_bytes, final_elapsed.as_secs_f64(), final_speed_mbps);
+
+    println!(
+        "Download completed: {} bytes in {:.2}s, final speed: {:.2} Mbps",
+        total_bytes,
+        final_elapsed.as_secs_f64(),
+        final_speed_mbps
+    );
     Ok(total_bytes)
 }
 
@@ -158,7 +166,7 @@ pub async fn test_docker_registry_download_speed(
     timeout_seconds: u64,
 ) -> DockerRegistryTestResult {
     let start_time = Instant::now();
-    
+
     // Validate image name
     if !validate_docker_image_name(image_name) {
         return DockerRegistryTestResult {
@@ -175,7 +183,7 @@ pub async fn test_docker_registry_download_speed(
 
     // Parse image name to extract repository and tag
     let (repository, tag) = parse_image_name(image_name);
-    
+
     // Build registry URL
     let registry_url = if registry.contains("://") {
         registry.to_string()
@@ -186,7 +194,9 @@ pub async fn test_docker_registry_download_speed(
     let download_duration = Duration::from_secs(timeout_seconds); // Enforce user's timeout
 
     // Try the blob-based download approach
-    match test_registry_with_manifest_approach(&registry_url, &repository, &tag, download_duration).await {
+    match test_registry_with_manifest_approach(&registry_url, &repository, &tag, download_duration)
+        .await
+    {
         Ok(downloaded_bytes) => {
             let elapsed = start_time.elapsed().as_secs_f64();
             let speed_mbps = if elapsed > 0.0 {
@@ -197,7 +207,10 @@ pub async fn test_docker_registry_download_speed(
 
             // If we downloaded any data, consider it a success (even if it timed out)
             if downloaded_bytes > 0 {
-                println!("✅ Download succeeded for {}: {} bytes, {:.3} Mbps", registry, downloaded_bytes, speed_mbps);
+                println!(
+                    "✅ Download succeeded for {}: {} bytes, {:.3} Mbps",
+                    registry, downloaded_bytes, speed_mbps
+                );
 
                 DockerRegistryTestResult {
                     registry: registry.to_string(),
@@ -211,7 +224,7 @@ pub async fn test_docker_registry_download_speed(
                 }
             } else {
                 println!("❌ No data downloaded from {}", registry);
-                
+
                 DockerRegistryTestResult {
                     registry: registry.to_string(),
                     image_name: image_name.to_string(),
@@ -227,7 +240,7 @@ pub async fn test_docker_registry_download_speed(
         Err(e) => {
             let elapsed = start_time.elapsed().as_secs_f64();
             println!("❌ Download failed for {}: {}", registry, e);
-            
+
             DockerRegistryTestResult {
                 registry: registry.to_string(),
                 image_name: image_name.to_string(),
@@ -251,7 +264,7 @@ fn parse_image_name(image_name: &str) -> (String, String) {
         // Handle tag format (e.g., ubuntu:latest)
         let before_colon = &image_name[..colon_pos];
         let after_colon = &image_name[colon_pos + 1..];
-        
+
         // Check if after colon looks like a port number (for registry URLs)
         if after_colon.chars().all(|c| c.is_ascii_digit()) && before_colon.contains('/') {
             // This is likely a registry with port, treat whole thing as repository
@@ -274,94 +287,117 @@ async fn test_registry_with_manifest_approach(
     max_duration: Duration,
 ) -> Result<u64> {
     let start_time = Instant::now();
-    
-    println!("Testing registry: {} with image: {}:{}", registry_url, repository, tag);
-    
+
+    println!(
+        "Testing registry: {} with image: {}:{}",
+        registry_url, repository, tag
+    );
+
     // Try to get the actual manifest that contains layer information
     let layer_digest = match tokio::task::spawn_blocking({
         let registry_url = registry_url.to_string();
         let repository = repository.to_string();
         let tag = tag.to_string();
         move || get_first_layer_digest(&registry_url, &repository, &tag)
-    }).await? {
+    })
+    .await?
+    {
         Ok(digest) => {
             println!("Got layer digest: {}", digest);
             digest
-        },
+        }
         Err(e) => {
             println!("Failed to get layer digest: {}", e);
             return Err(anyhow::anyhow!("Failed to get layer digest: {}", e));
-        },
+        }
     };
-    
+
     // Check if we still have time for downloading
     if start_time.elapsed() >= max_duration {
         return Err(anyhow::anyhow!("Timeout during manifest fetching"));
     }
-    
+
     // Download layer blob for speed testing
     let blob_url = format!("{}/v2/{}/blobs/{}", registry_url, repository, layer_digest);
     println!("Downloading blob from: {}", blob_url);
-    
+
     let remaining_duration = max_duration - start_time.elapsed();
-    
+
     // Use tokio::task::spawn_blocking to run the synchronous ureq download in async context
-    let downloaded_bytes = tokio::task::spawn_blocking(move || {
-        download_with_ureq(&blob_url, remaining_duration)
-    }).await??;
-    
-    println!("Downloaded {} bytes from {}", downloaded_bytes, registry_url);
+    let downloaded_bytes =
+        tokio::task::spawn_blocking(move || download_with_ureq(&blob_url, remaining_duration))
+            .await??;
+
+    println!(
+        "Downloaded {} bytes from {}",
+        downloaded_bytes, registry_url
+    );
     Ok(downloaded_bytes)
 }
 
 // Simplified helper function to get the first layer digest - following the user's example
-fn get_first_layer_digest(registry_url: &str, repository: &str, tag: &str) -> Result<String, anyhow::Error> {
+fn get_first_layer_digest(
+    registry_url: &str,
+    repository: &str,
+    tag: &str,
+) -> Result<String, anyhow::Error> {
     println!("Fetching tag manifest for {}:{}", repository, tag);
-    
+
     // Step 1: Fetch tag manifest (exactly like user's example)
     let manifest_list = fetch_tag_manifest(registry_url, repository, tag)
         .map_err(|e| anyhow::anyhow!("Failed to fetch tag manifest: {}", e))?;
-    
+
     if manifest_list.manifests.is_empty() {
         // Try direct manifest fetch as fallback
         println!("No manifests in list, trying direct manifest fetch");
         let direct_manifest = fetch_digest_manifest(registry_url, repository, tag)
             .map_err(|e| anyhow::anyhow!("Failed to fetch direct manifest: {}", e))?;
-        
+
         if direct_manifest.layers.is_empty() {
             return Err(anyhow::anyhow!("No layers found in direct manifest"));
         }
-        
+
         return Ok(direct_manifest.layers[0].digest.clone());
     }
-    
+
     // Step 2: Get first manifest digest (exactly like user's example)
     let first_manifest_digest = &manifest_list.manifests[0].digest;
     println!("First manifest digest: {}", first_manifest_digest);
-    
+
     // Step 3: Fetch digest manifest (exactly like user's example)
     let digest_manifest = fetch_digest_manifest(registry_url, repository, first_manifest_digest)
         .map_err(|e| anyhow::anyhow!("Failed to fetch digest manifest: {}", e))?;
-    
+
     if digest_manifest.layers.is_empty() {
         return Err(anyhow::anyhow!("No layers found in digest manifest"));
     }
-    
+
     // Step 4: Get first layer digest (exactly like user's example)
     let layer_digest = &digest_manifest.layers[0].digest;
     let layer_size = digest_manifest.layers[0].size;
-    println!("First layer digest: {}, size: {} bytes ({:.2} MB)", layer_digest, layer_size, layer_size as f64 / (1024.0 * 1024.0));
-    
+    println!(
+        "First layer digest: {}, size: {} bytes ({:.2} MB)",
+        layer_digest,
+        layer_size,
+        layer_size as f64 / (1024.0 * 1024.0)
+    );
+
     // If first layer is very small, try to find a larger one
-    if layer_size < 1024 * 1024 && digest_manifest.layers.len() > 1 { // If < 1MB and more layers available
+    if layer_size < 1024 * 1024 && digest_manifest.layers.len() > 1 {
+        // If < 1MB and more layers available
         for (i, layer) in digest_manifest.layers.iter().enumerate().skip(1) {
             if layer.size > layer_size {
-                println!("Using larger layer {} instead: {}, size: {} bytes ({:.2} MB)", 
-                    i, layer.digest, layer.size, layer.size as f64 / (1024.0 * 1024.0));
+                println!(
+                    "Using larger layer {} instead: {}, size: {} bytes ({:.2} MB)",
+                    i,
+                    layer.digest,
+                    layer.size,
+                    layer.size as f64 / (1024.0 * 1024.0)
+                );
                 return Ok(layer.digest.clone());
             }
         }
     }
-    
+
     Ok(layer_digest.clone())
 }
