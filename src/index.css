@@ -92,7 +92,31 @@
   }
 
   .submit-button {
-    @apply h-[calc(100%-14px)] absolute left-2 top-[7px] text-[14px] p-2 px-5 transition rounded bg-[#38727C] !text-white flex items-center gap-2 cursor-pointer hover:bg-[#96989A] hover:text-[#848484] disabled:opacity-50 disabled:cursor-not-allowed z-20;
+    @apply h-[calc(100%-14px)] absolute left-2 top-1.75 text-[14px] p-2 px-5 transition rounded bg-[#38727C] text-white! flex items-center gap-2 cursor-pointer hover:bg-[#96989A] hover:text-[#848484] disabled:opacity-50 disabled:cursor-not-allowed z-20;
+  }
+
+  .btn-gradient-primary {
+    @apply bg-linear-to-br from-[#1C4C91] to-[#2F81F7] text-white shadow-md hover:brightness-110 transition-all duration-200;
+  }
+
+  .btn-gradient-teal {
+    @apply bg-linear-to-br from-[#2a6570] to-[#38727C] text-white hover:brightness-110 transition-all duration-200;
+  }
+
+  .proxy-field {
+    @apply w-full rounded-lg bg-[#30363D] border border-[#444C56] px-3 py-2.5 text-sm text-white outline-none focus:border-[#2F81F7] transition-colors placeholder:text-[#6B7280];
+  }
+
+  .cancel-test-button-standalone {
+    @apply shrink-0 w-13 self-stretch rounded-md border border-[#F85149]/40 text-[#F85149] hover:bg-[#301B1F] hover:border-[#F85149]/70 cursor-pointer flex items-center justify-center transition-all duration-200;
+  }
+
+  .action-chip {
+    @apply shrink-0 px-2.5 py-1 rounded-md text-[11px] font-medium border border-[#3FB950]/35 text-[#56d364] bg-[#3FB950]/10 hover:bg-[#3FB950]/20 hover:border-[#3FB950]/60 transition-all duration-200 cursor-pointer leading-none;
+  }
+
+  .reset-dns-btn {
+    @apply inline-flex items-center justify-center h-8 px-3.5 rounded-full text-[11px] leading-none border border-[#30363D] text-[#9BA3AF] hover:border-[#F85149]/50 hover:text-[#F85149] hover:bg-[#F85149]/10 transition-all duration-200 cursor-pointer;
   }
 }
 
@@ -276,4 +300,27 @@
 /* sonner */
 .toast-item {
   gap: 12px !important;
+}
+
+.proxy-drawer {
+  transform-origin: bottom left;
+  transition:
+    opacity 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0.34s;
+  will-change: transform, opacity;
+}
+
+.proxy-drawer-open {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.proxy-drawer-closed {
+  opacity: 0;
+  transform: translateY(14px);
+  visibility: hidden;
+  pointer-events: none;
 }

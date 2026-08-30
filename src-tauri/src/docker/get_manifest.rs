@@ -4,6 +4,13 @@ use std::time::Duration;
 use anyhow::Result;
 use std::io::Read;
 
+fn ensure_not_cancelled() -> Result<()> {
+    if crate::task_control::is_cancelled() {
+        anyhow::bail!("Download cancelled");
+    }
+    Ok(())
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ManifestList {
@@ -56,15 +63,18 @@ pub struct LayerDescriptor {
 
 // Create a configured HTTP client
 fn create_http_client() -> Result<ureq::Agent> {
-    let agent = ureq::AgentBuilder::new()
-        .timeout(Duration::from_secs(30))
-        .user_agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-        .build();
+    let agent = crate::proxy::apply_ureq_proxy(
+        ureq::AgentBuilder::new()
+            .timeout(Duration::from_secs(30))
+            .user_agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
+    )
+    .build();
     Ok(agent)
 }
 
 /// Fetch and parse a manifest list from a registry URL
 pub fn fetch_tag_manifest(registry_url: &str, image_name: &str, tag: &str) -> Result<ManifestList> {
+    ensure_not_cancelled()?;
     let agent = create_http_client()?;
     let url = format!("{}/v2/{}/manifests/{}", registry_url, image_name, tag);
     
@@ -98,6 +108,7 @@ pub fn fetch_tag_manifest(registry_url: &str, image_name: &str, tag: &str) -> Re
 }
 
 pub fn fetch_digest_manifest(registry_url: &str, image_name: &str, digest: &str) -> Result<DigestManifest> {
+    ensure_not_cancelled()?;
     let agent = create_http_client()?;
     let url = format!("{}/v2/{}/manifests/{}", registry_url, image_name, digest);
     

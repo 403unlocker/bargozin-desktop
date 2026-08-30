@@ -91,13 +91,15 @@ impl Resolve for CustomDnsResolver {
 pub async fn check_url_with_dns(url: &Url, dns_ip: &str) -> Option<(u16, String)> {
     let resolver = CustomDnsResolver::new(dns_ip)?;
     
-    let client = Client::builder()
-        .dns_resolver(Arc::new(resolver))
-        .danger_accept_invalid_certs(true)
-        .timeout(Duration::from_secs(10))
-        .user_agent("Mozilla/5.0 (compatible; 403Unlocker)")
-        .build()
-        .ok()?;
+    let client = crate::proxy::apply_reqwest_proxy(
+        Client::builder()
+            .dns_resolver(Arc::new(resolver))
+            .danger_accept_invalid_certs(true)
+            .timeout(Duration::from_secs(10))
+            .user_agent("Mozilla/5.0 (compatible; 403Unlocker)"),
+    )
+    .build()
+    .ok()?;
 
     match client.get(url.as_str()).send().await {
         Ok(res) => {

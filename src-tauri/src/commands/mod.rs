@@ -3,6 +3,7 @@ use crate::docker::{
     docker_config_path, download_docker_config_file, read_docker_registries_file,
     test_docker_registry_download_speed, validate_docker_image_name, DOCKER_CONFIG_URL,
 };
+use crate::task_control::{is_cancelled, request_cancel, reset_cancel};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter};
@@ -23,12 +24,14 @@ where
         task_fn().await;
         let mut active_tasks = ACTIVE_TASKS.lock().unwrap();
         active_tasks.remove(&task_key_for_cleanup);
+        crate::proxy::set_settings_locked(!active_tasks.is_empty());
         println!("Cleaned up completed task: {}", task_key_for_cleanup);
     });
     
     {
         let mut active_tasks = ACTIVE_TASKS.lock().unwrap();
         active_tasks.insert(task_key, vec![handle]);
+        crate::proxy::set_settings_locked(true);
         println!("Added task to active_tasks: {}", task_key_for_log);
     }
 }
@@ -47,6 +50,7 @@ pub async fn test_dns_servers(domain: String, app_handle: AppHandle) -> Result<(
             eprintln!("Failed to abort all tasks: {}", e);
         }
     }
+    reset_cancel();
 
     let domain = domain.trim().to_string();
 
@@ -94,6 +98,7 @@ pub async fn test_download_speed_all_dns(
             eprintln!("Failed to abort all tasks: {}", e);
         }
     }
+    reset_cancel();
 
     let url = url.trim().to_string();
 
@@ -111,6 +116,11 @@ pub async fn test_download_speed_all_dns(
         println!("Starting download tests for URL: {}", url);
 
         for (index, &dns_server) in DNS_SERVERS.iter().enumerate() {
+            if is_cancelled() {
+                println!("Download tests cancelled, stopping before {}", dns_server);
+                break;
+            }
+
             println!(
                 "Testing DNS server {} ({}/{}): {}",
                 dns_server,
@@ -126,6 +136,11 @@ pub async fn test_download_speed_all_dns(
             let result =
                 test_download_speed_with_dns(url_clone, dns_server_string, timeout_seconds, 0)
                     .await;
+
+            if is_cancelled() {
+                println!("Download tests cancelled after {}", dns_server);
+                break;
+            }
 
             println!(
                 "Download test result for {}: success={}, speed={:.3} Mbps",
@@ -168,6 +183,14 @@ pub async fn test_docker_registries(
 
     println!("Starting Docker registry tests for image: {}", image_name);
 
+    {
+        let result = abort_all_tasks().await;
+        if let Err(e) = result {
+            eprintln!("Failed to abort all tasks: {}", e);
+        }
+    }
+    reset_cancel();
+
     // Get registries list
     let docker_file_path = docker_config_path();
     let registries = match read_docker_registries_file(&docker_file_path).await {
@@ -196,6 +219,11 @@ pub async fn test_docker_registries(
     let image_name_for_task = image_name.clone();
     spawn_with_cleanup(image_name.clone(), move || async move {
         for (index, registry) in registries.iter().enumerate() {
+            if is_cancelled() {
+                println!("Docker registry tests cancelled, stopping before {}", registry);
+                break;
+            }
+
             println!(
                 "Testing registry {}/{}: {}",
                 index + 1,
@@ -209,6 +237,11 @@ pub async fn test_docker_registries(
                 timeout_seconds,
             )
             .await;
+
+            if is_cancelled() {
+                println!("Docker registry tests cancelled after {}", registry);
+                break;
+            }
 
             // Set the session ID to 0
             result.session_id = 0;
@@ -260,6 +293,8 @@ pub async fn get_active_task_count() -> usize {
 
 #[tauri::command]
 pub async fn abort_all_tasks() -> Result<(), String> {
+    request_cancel();
+
     let mut active_tasks = ACTIVE_TASKS.lock().unwrap();
     println!("Aborting All Tasks, total tasks: {}", active_tasks.len());
 
@@ -280,6 +315,7 @@ pub async fn abort_all_tasks() -> Result<(), String> {
 
     // Clear all tasks from storage
     active_tasks.clear();
+    crate::proxy::set_settings_locked(false);
     println!("Cleared {} tasks from storage", keys_to_remove.len());
 
     Ok(())

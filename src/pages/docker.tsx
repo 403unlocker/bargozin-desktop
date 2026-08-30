@@ -8,6 +8,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { toast } from "sonner";
 import Info from "../components/svg/info";
+import { cancelRunningTests } from "../hooks/use-cancel-test";
+import { useScrollHint } from "../hooks/use-scroll-hint";
+import { useSyncTestRunning } from "../context/test-session";
 
 interface DockerRegistryTestResult {
   registry: string;
@@ -125,6 +128,7 @@ export default function Docker() {
     setIsLoading(true);
     setIsCompleted(false);
     setAllResults([]);
+    currentSessionRef.current = 0;
 
     try {
       // Start Docker registry tests (this will generate a new session ID in backend)
@@ -139,44 +143,59 @@ export default function Docker() {
     }
   };
 
-  const totalResults = allResults.length;
+  const totalResults = new Set(allResults.map((result) => result.registry)).size;
   const totalExpected = 9; // Total number of Docker registries
+  const isInProgress =
+    !isCompleted &&
+    (isLoading || (totalResults > 0 && totalResults < totalExpected));
+  const showMoreHint = useScrollHint(rightColumnRef, [allResults.length]);
+  useSyncTestRunning(isInProgress);
+
+  const handleCancel = async () => {
+    currentSessionRef.current += 1;
+    await cancelRunningTests();
+    setIsLoading(false);
+    setIsCompleted(true);
+  };
 
   return (
-    <div className="text-right h-full flex flex-col pr-[35px]">
+    <div className="text-right h-full flex flex-col pr-8.75">
       {/* Input Section - Fixed height */}
-      <div className="flex-shrink-0">
-        <p className="mb-4 flex justify-end items-center gap-2">
-          <button
-            className="cursor-pointer"
-            onClick={() =>
-              showInfo(
-                "در این فیلد باید نام کامل ایمیج داکر مورد نظر خود را وارد کنید. این نام شامل ریپازیتوری، تگ و در صورت نیاز، آدرس ریجیستری خواهد بود. اطمینان حاصل کنید که نام وارد شده دقیق و صحیح باشد تا فرآیند دانلود به درستی انجام شود.",
-                {
-                  buttons: [
-                    {
-                      label: "متوجه شدم",
-                      action: () => {
-                        hideAlert("docker-image-validation-error");
+      <div className="shrink-0">
+        <div className="mb-4 flex justify-end items-center min-h-8">
+          <p className="flex items-center gap-2">
+            <button
+              className="cursor-pointer"
+              onClick={() =>
+                showInfo(
+                  "در این فیلد باید نام کامل ایمیج داکر مورد نظر خود را وارد کنید. این نام شامل ریپازیتوری، تگ و در صورت نیاز، آدرس ریجیستری خواهد بود. اطمینان حاصل کنید که نام وارد شده دقیق و صحیح باشد تا فرآیند دانلود به درستی انجام شود.",
+                  {
+                    buttons: [
+                      {
+                        label: "متوجه شدم",
+                        action: () => {
+                          hideAlert("docker-image-validation-error");
+                        },
+                        variant: "none",
                       },
-                      variant: "none",
-                    },
-                  ],
-                }
-              )
-            }
-          >
-            <Question className="w-5 h-5" />
-          </button>
-          ایمیج داکر
-        </p>
-        <div className="mb-4 relative">
+                    ],
+                  }
+                )
+              }
+            >
+              <Question className="w-5 h-5" />
+            </button>
+            ایمیج داکر
+          </p>
+        </div>
+        <div className="mb-4 flex gap-2 items-stretch">
+          <div className="relative flex-1 min-w-0">
           {/* Progress Bar Background */}
           {(totalResults > 0 || isLoading) && (
             <div className="absolute inset-0 rounded-md overflow-hidden">
               <div
                 className={`h-full transition-all duration-500 ${isLoading && totalResults === 0
-                  ? "bg-gradient-to-r from-blue-500/20 via-blue-500/30 to-blue-500/20 animate-pulse"
+                  ? "bg-linear-to-r from-blue-500/20 via-blue-500/30 to-blue-500/20 animate-pulse"
                   : isLoading && totalResults < totalExpected
                     ? "bg-green-500/25 animate-pulse"
                     : "bg-green-500/30"
@@ -201,34 +220,41 @@ export default function Docker() {
             onKeyDown={(e) => e.key === "Enter" && handleDockerRegistryTest()}
             className="main-input dir-fa"
             placeholder="مثلا ubuntu:latest"
-            disabled={isLoading}
+            disabled={isInProgress}
             autoCorrect="off"
             autoComplete="off"
             spellCheck="false"
           />
 
           {/* Progress Text */}
-          {(totalResults > 0 || isLoading) && (
-            <div className="absolute left-[185px] top-1/2 transform -translate-y-1/2 text-xs text-gray-400 z-20">
+          {isInProgress && (
+            <div className="absolute left-46.25 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 z-20 pointer-events-none">
               {isLoading && totalResults === 0
                 ? "در حال شروع تست..."
-                : `${totalResults} / ${totalExpected} ${isCompleted ? "تکمیل شد" : ""
-                }`}
+                : `${totalResults} / ${totalExpected}`}
             </div>
           )}
 
           <button
             onClick={handleDockerRegistryTest}
-            disabled={
-              isLoading || (totalResults > 0 && totalResults < totalExpected)
-            }
+            disabled={isInProgress}
             className="submit-button group dir-fa"
           >
             <Search />
-            {isLoading || (totalResults > 0 && totalResults < totalExpected)
-              ? "در حال بررسی..."
-              : "بررسی رجیستری‌ها"}
+            {isInProgress ? "در حال بررسی..." : "بررسی رجیستری‌ها"}
           </button>
+          </div>
+
+          {isInProgress && (
+            <button
+              type="button"
+              onClick={() => void handleCancel()}
+              className="cancel-test-button-standalone"
+              title="لغو"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="1" width="4.5" height="14" rx="1.2"/><rect x="9.5" y="1" width="4.5" height="14" rx="1.2"/></svg>
+            </button>
+          )}
         </div>
 
         <div>
@@ -258,7 +284,7 @@ export default function Docker() {
           </div>
 
           <div className="flex items-end gap-2 dir-fa">
-            <div className="w-[122px] h-[43px] bg-[#30363D] border-[#444C56] border rounded-xl grid grid-cols-3 cursor-pointer">
+          <div className="w-30.5 h-10.75 bg-[#30363D] border-[#444C56] border rounded-xl grid grid-cols-3 cursor-pointer">
               <button
                 onClick={() => setTimeoutSeconds(timeoutSeconds + 1)}
                 className="h-full w-full flex items-center justify-center hover:bg-[#262a30] rounded-r-xl p-1 select-none cursor-pointer"
@@ -281,7 +307,7 @@ export default function Docker() {
             <p className="h-full text-md">ثانیه</p>
           </div>
 
-          <div className="text-right dir-fa mt-3 text-sm text-[#F5C518] flex items-center h-[20px]">
+          <div className="text-right dir-fa mt-3 text-sm text-[#F5C518] flex items-center h-5">
             {timeoutSeconds <= 5 ? (
               <>
                 <Info fill="#F5C518" />
@@ -306,9 +332,7 @@ export default function Docker() {
       </div>
 
       {/* Results Section - Takes remaining space */}
-      <div className="flex-1 flex flex-col min-h-0">
-        <p className="text-right mb-2 mt-2">نتایج تست</p>
-
+      <div className="flex-1 flex flex-col min-h-0 mb-20">
         {(totalResults > 0 || isCompleted) && (
           <div className="grid grid-cols-2 gap-4 flex-1 min-h-0 dir-fa">
             {/* Right Column - Docker registries */}
@@ -328,20 +352,21 @@ export default function Docker() {
                       errorMessage={result.error_message}
                       isDownloadSpeed={true}
                       isBest={index === 0 && result.success}
+                      allowSetDns={false}
                     />
                   ))}
               </div>
 
-              {allResults.length > 5 && (
+              {allResults.length > 5 && showMoreHint && (
                 <>
                   {/* Black Gradient Overlay */}
-                  <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#0D1117] to-transparent pointer-events-none"></div>
+                  <div className="absolute bottom-0 left-0 right-0 h-16 bg-linear-to-t from-[#0D1117] to-transparent pointer-events-none"></div>
 
                   {/* More Items Button */}
                   <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2">
                     <button
                       onClick={() => scrollToBottom(rightColumnRef)}
-                      className="text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 shadow-lg dir-fa flex items-center gap-2"
+                      className="text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 shadow-lg dir-fa flex items-center gap-2 cursor-pointer"
                     >
                       <DoubleChevronDown />
                       موارد بیشتر

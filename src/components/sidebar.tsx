@@ -2,8 +2,8 @@ import { Link, useLocation } from "react-router";
 import SidebarItem from "./sidebar-item";
 import Docker from "./svg/docker";
 import Download from "./svg/download";
-import Info from "./svg/info";
 import Web from "./svg/web";
+import Info from "./svg/info";
 
 export default function Sidebar() {
   const location = useLocation();

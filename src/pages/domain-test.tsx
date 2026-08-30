@@ -10,6 +10,10 @@ import { toast } from "sonner";
 import XIcon from "../components/svg/x-icon";
 import CheckIcon from "../components/svg/check-icon";
 import Retry from "../components/svg/retry";
+import { useSetSystemDns } from "../hooks/use-set-system-dns";
+import { cancelRunningTests } from "../hooks/use-cancel-test";
+import { useScrollHint } from "../hooks/use-scroll-hint";
+import { useSyncTestRunning } from "../context/test-session";
 
 interface DnsTestResult {
   dns_server: string;
@@ -22,6 +26,7 @@ interface DnsTestResult {
 export default function DomainTest() {
   const { showInfo, showError } = useAlertHelpers();
   const { hideAlert } = useAlert();
+  const { requestResetDns } = useSetSystemDns();
   const leftColumnRef = useRef<HTMLDivElement>(null);
   const rightColumnRef = useRef<HTMLDivElement>(null);
   const currentSessionRef = useRef<number>(0);
@@ -116,6 +121,7 @@ export default function DomainTest() {
     setIsCompleted(false);
     setUsableResults([]);
     setUnusableResults([]);
+    currentSessionRef.current = 0;
 
     try {
       await invoke("test_dns_servers", {
@@ -128,38 +134,59 @@ export default function DomainTest() {
     }
   };
 
-  const totalResults = usableResults.length + unusableResults.length;
+  const totalResults = new Set(
+    [...usableResults, ...unusableResults].map((result) => result.dns_server)
+  ).size;
   const totalExpected = 27; // Total number of DNS servers
+  const isInProgress =
+    !isCompleted &&
+    (isLoading || (totalResults > 0 && totalResults < totalExpected));
+  const showUsableMoreHint = useScrollHint(rightColumnRef, [usableResults.length]);
+  const showUnusableMoreHint = useScrollHint(leftColumnRef, [unusableResults.length]);
+  useSyncTestRunning(isInProgress);
+
+  const handleCancel = async () => {
+    currentSessionRef.current += 1;
+    await cancelRunningTests();
+    setIsLoading(false);
+    setIsCompleted(true);
+  };
 
   return (
-    <div className="text-right h-full flex flex-col pr-[35px]">
+    <div className="text-right h-full flex flex-col pr-8.75">
       {/* Input Section - Fixed height */}
-      <div className="flex-shrink-0">
-        <p className="mb-4 flex justify-end items-center gap-2">
-          <button
-            className="cursor-pointer"
-            onClick={() =>
-              showInfo(
-                "دامنه موردنظر خود را وارد کنید تا بررسی کنیم کدام سرورهای DNS می‌توانند آن را با موفقیت باز کنند.",
-                {
-                  buttons: [
-                    {
-                      label: "متوجه شدم",
-                      action: () => {
-                        hideAlert("docker-image-validation-error");
-                      },
-                      variant: "none",
-                    },
-                  ],
-                }
-              )
-            }
-          >
-            <Question className="w-5 h-5" />
+      <div className="shrink-0">
+        <div className="mb-4 flex justify-between items-center min-h-8">
+          <button onClick={requestResetDns} className="reset-dns-btn dir-fa">
+            بازنشانی DNS
           </button>
-          دامنه مورد نظر
-        </p>
-        <div className="mb-4 relative">
+          <p className="flex justify-end items-center gap-2">
+            <button
+              className="cursor-pointer"
+              onClick={() =>
+                showInfo(
+                  "دامنه موردنظر خود را وارد کنید تا بررسی کنیم کدام سرورهای DNS می‌توانند آن را با موفقیت باز کنند.",
+                  {
+                    buttons: [
+                      {
+                        label: "متوجه شدم",
+                        action: () => {
+                          hideAlert("docker-image-validation-error");
+                        },
+                        variant: "none",
+                      },
+                    ],
+                  }
+                )
+              }
+            >
+              <Question className="w-5 h-5" />
+            </button>
+            دامنه مورد نظر
+          </p>
+        </div>
+        <div className="mb-4 flex gap-2 items-stretch">
+          <div className="relative flex-1 min-w-0">
           {/* Progress Bar Background */}
           {(totalResults > 0 || isLoading) && (
             <div className="absolute inset-0 rounded-md overflow-hidden">
@@ -182,43 +209,49 @@ export default function DomainTest() {
             onKeyDown={(e) => e.key === "Enter" && handleDnsTest()}
             className="main-input dir-fa"
             placeholder="مثلا spotify.com"
-            disabled={isLoading}
+            disabled={isInProgress}
             autoCorrect="off"
             autoComplete="off"
             spellCheck="false"
           />
 
           {/* Progress Text */}
-          {(totalResults > 0 || isLoading) && (
-            <div className="absolute left-[170px] top-1/2 transform -translate-y-1/2 text-xs text-gray-400 z-20">
+          {isInProgress && (
+            <div className="absolute left-42.5 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 z-20 pointer-events-none">
               {totalResults} / {totalExpected}
             </div>
           )}
 
           <button
             onClick={handleDnsTest}
-            disabled={
-              isLoading || (totalResults > 0 && totalResults < totalExpected)
-            }
+            disabled={isInProgress}
             className="submit-button group dir-fa"
           >
             <Search />
-            {isLoading || (totalResults > 0 && totalResults < totalExpected)
-              ? "در حال بررسی..."
-              : "بررسی DNS ها"}
+            {isInProgress ? "در حال بررسی..." : "بررسی DNS ها"}
           </button>
+          </div>
+
+          {isInProgress && (
+            <button
+              type="button"
+              onClick={() => void handleCancel()}
+              className="cancel-test-button-standalone"
+              title="لغو"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="1" width="4.5" height="14" rx="1.2"/><rect x="9.5" y="1" width="4.5" height="14" rx="1.2"/></svg>
+            </button>
+          )}
         </div>
       </div>
 
       {/* Results Section - Takes remaining space */}
-      <div className="flex-1 flex flex-col min-h-0">
-        <p className="text-center mt-2 mb-3">نتایج تست</p>
-
+      <div className="flex-1 flex flex-col min-h-0 mb-20">
         {(totalResults > 0 || isCompleted) && (
           <div className="grid grid-cols-2 gap-4 flex-1 min-h-0 dir-fa">
             {/* Right Column - Usable DNS servers */}
             <div className="relative flex flex-col overflow-auto">
-              <div className="mb-4 text-center flex-shrink-0">
+              <div className="mb-4 text-center shrink-0">
                 <span className="text-green-400 text-sm font-medium">
                   قابل استفاده ({usableResults.length})
                 </span>
@@ -258,16 +291,16 @@ export default function DomainTest() {
                 )}
               </div>
 
-              {usableResults.length > 5 && (
+              {usableResults.length > 5 && showUsableMoreHint && (
                 <>
                   {/* Black Gradient Overlay */}
-                  <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#0D1117] to-transparent pointer-events-none"></div>
+                  <div className="absolute bottom-0 left-0 right-0 h-16 bg-linear-to-t from-[#0D1117] to-transparent pointer-events-none"></div>
 
                   {/* More Items Button */}
                   <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2">
                     <button
                       onClick={() => scrollToBottom(rightColumnRef)}
-                      className="text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 shadow-lg dir-fa flex items-center gap-2"
+                      className="text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 shadow-lg dir-fa flex items-center gap-2 cursor-pointer"
                     >
                       <DoubleChevronDown />
                       موارد بیشتر
@@ -279,7 +312,7 @@ export default function DomainTest() {
 
             {/* Left Column - Unusable DNS servers */}
             <div className="relative flex flex-col overflow-auto">
-              <div className="mb-4 text-center flex-shrink-0">
+              <div className="mb-4 text-center shrink-0">
                 <span className="text-red-400 text-sm font-medium">
                   مسدود شده ({unusableResults.length})
                 </span>
@@ -307,16 +340,16 @@ export default function DomainTest() {
                 )}
               </div>
 
-              {unusableResults.length >= 5 && (
+              {unusableResults.length >= 5 && showUnusableMoreHint && (
                 <>
                   {/* Black Gradient Overlay */}
-                  <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#0D1117] to-transparent pointer-events-none"></div>
+                  <div className="absolute bottom-0 left-0 right-0 h-16 bg-linear-to-t from-[#0D1117] to-transparent pointer-events-none"></div>
 
                   {/* More Items Button */}
                   <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2">
                     <button
                       onClick={() => scrollToBottom(leftColumnRef)}
-                      className="text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 shadow-lg dir-fa flex items-center gap-2"
+                      className="text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 shadow-lg dir-fa flex items-center gap-2 cursor-pointer"
                     >
                       <DoubleChevronDown />
                       موارد بیشتر

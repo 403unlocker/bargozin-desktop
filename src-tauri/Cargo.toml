@@ -22,7 +22,7 @@ tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-reqwest = { version = "0.12", features = ["json", "stream", "rustls-tls"], default-features = false }
+reqwest = { version = "0.12", features = ["json", "stream", "rustls-tls", "socks"], default-features = false }
 tokio = { version = "1.0", features = ["full", "process"] }
 regex = "1.5"
 url = "2.4"
@@ -37,4 +37,21 @@ serde_yaml = "0.9"
 # Docker registry testing
 tar = "0.4"
 flate2 = "1.0"
-ureq = "2.9"
+ureq = { version = "2.9", features = ["socks-proxy"] }
+
+[target.'cfg(target_os = "macos")'.dependencies.reqwest]
+version = "0.12"
+default-features = false
+features = ["macos-system-configuration"]
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_NetworkManagement_IpHelper",
+    "Win32_NetworkManagement_Ndis",
+    "Win32_Networking_WinSock",
+    "Win32_System_Registry",
+    "Win32_System_Threading",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+] }

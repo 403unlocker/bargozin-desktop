@@ -179,29 +179,20 @@ const AlertComponent: React.FC<AlertComponentProps> = ({
   const scale = 1 - (totalAlerts - 1 - index) * 0.02; // Subtle scale effect
   const opacity = isTopAlert ? 1 : 0.8 - (totalAlerts - 1 - index) * 0.1;
 
-  const getTypeStyles = (type: AlertConfig["type"]) => {
-    switch (type) {
-      case "success":
-        return "border-l-green-500 bg-green-500/10";
-      case "warning":
-        return "border-l-yellow-500 bg-yellow-500/10";
-      case "error":
-        return "border-l-red-500 bg-red-500/10";
-      default:
-        return "border-l-blue-500 bg-blue-500/10";
-    }
+  const getTypeStyles = (_type: AlertConfig["type"]) => {
+    return "border-none";
   };
 
   const getButtonStyles = (variant: AlertButton["variant"]) => {
     switch (variant) {
       case "primary":
-        return "bg-blue-600 hover:bg-blue-700 text-white";
+        return "bg-gradient-to-br from-[#1C4C91] to-[#2F81F7] text-white shadow-md hover:brightness-110";
       case "destructive":
-        return "bg-red-600 hover:bg-red-700 text-white";
+        return "bg-gradient-to-br from-[#7a1a1a] to-[#F85149] text-white shadow-md hover:brightness-110";
       case "none":
-        return "text-white hover:text-gray-500 cursor-pointer";
+        return "text-[#CDCDCD] hover:text-white cursor-pointer";
       default:
-        return "bg-gray-600 hover:bg-gray-700 text-white";
+        return "bg-[#30363D] hover:bg-[#3D444D] text-[#CDCDCD] hover:text-white border border-[#444C56]";
     }
   };
 
@@ -266,20 +257,13 @@ const AlertComponent: React.FC<AlertComponentProps> = ({
     >
       <div
         className={`
-        ${sizeStyles.container} mx-auto rounded-lg shadow-2xl border-l-4
+        ${sizeStyles.container} mx-auto rounded-2xl shadow-2xl
         transition-all duration-150 ease-out
         ${getTypeStyles(alert.type)}
       `}
         style={{
-          backgroundColor:
-            alert.type === "success"
-              ? "#142A20"
-              : alert.type === "warning"
-              ? "#eab308"
-              : alert.type === "error"
-              ? "#301B1F"
-              : "#444C56",
-          border: "none",
+          backgroundColor: "#161B22",
+          border: "1px solid #30363D",
         }}
       >
         {/* Header */}
@@ -291,7 +275,7 @@ const AlertComponent: React.FC<AlertComponentProps> = ({
           <div className="flex-1">
             {alert.title && (
               <h3
-                className={`${sizeStyles.title} font-semibold text-white mb-1`}
+                className={`${sizeStyles.title} font-semibold text-white mb-2`}
               >
                 {alert.title}
               </h3>
@@ -303,7 +287,7 @@ const AlertComponent: React.FC<AlertComponentProps> = ({
             ) : (
               alert.message && (
                 <p
-                  className={`${sizeStyles.text} text-gray-200 leading-relaxed`}
+                  className={`${sizeStyles.text} text-[#9BA3AF] leading-relaxed`}
                 >
                   {alert.message}
                 </p>
@@ -341,9 +325,9 @@ const AlertComponent: React.FC<AlertComponentProps> = ({
                   className={`
                     ${
                       sizeStyles.button
-                    } rounded-md font-medium transition-all duration-150
+                    } rounded-lg font-medium transition-all duration-200 cursor-pointer
                     disabled:opacity-50 disabled:cursor-not-allowed
-                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800
+                    focus:outline-none
                     ${getButtonStyles(button.variant)}
                   `}
                 >

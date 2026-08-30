@@ -1,5 +1,6 @@
 import Clipboard from "./svg/clipboard";
 import { useState } from "react";
+import { useSetSystemDns } from "../hooks/use-set-system-dns";
 
 export default function DownloadResultItem(props: {
   dns: string;
@@ -8,8 +9,10 @@ export default function DownloadResultItem(props: {
   errorMessage?: string;
   isDownloadSpeed?: boolean;
   isBest?: boolean;
+  allowSetDns?: boolean;
 }) {
   const [isCopied, setIsCopied] = useState(false);
+  const { requestSetDns } = useSetSystemDns();
 
   const handleCopy = async () => {
     try {
@@ -20,6 +23,11 @@ export default function DownloadResultItem(props: {
     } catch (error) {
       console.error("Failed to copy:", error);
     }
+  };
+
+  const handleSetDns = () => {
+    if (!props.status) return;
+    requestSetDns(props.dns);
   };
 
   const formatResponseTime = (time?: number) => {
@@ -47,9 +55,9 @@ export default function DownloadResultItem(props: {
         } min-h-[50px] w-full rounded-lg mb-2 flex justify-between items-center px-3 dir-en py-2`}
     >
       <div className="w-9/15 flex flex-col gap-[5px]">
-        <p className="w-full flex justify-start items-center gap-[8px] mb-1">
+        <p className="w-full flex justify-start items-center gap-2 mb-1 min-w-0">
           <button
-            className={`rounded transition-all duration-200 hover:bg-white/10 size-6 flex items-center justify-center ${isCopied
+            className={`shrink-0 rounded transition-all duration-200 hover:bg-white/10 size-6 flex items-center justify-center ${isCopied
               ? "text-green-400 scale-110"
               : "text-gray-400 hover:text-white cursor-pointer"
               }`}
@@ -59,11 +67,19 @@ export default function DownloadResultItem(props: {
             {isCopied ? <CheckIcon /> : <Clipboard />}
           </button>
           <span
-            className={`transition-colors translate-y-[2.5px] duration-200 text-left text-[15px] ${isCopied ? "text-green-400" : ""
+            className={`transition-colors translate-y-[2.5px] duration-200 text-left text-[15px] truncate min-w-0 ${isCopied ? "text-green-400" : ""
               }`}
           >
             {props.dns}
           </span>
+          {props.status && props.allowSetDns !== false && (
+            <button
+              onClick={handleSetDns}
+              className="action-chip dir-fa mr-auto"
+            >
+              تنظیم
+            </button>
+          )}
         </p>
       </div>
       <div className="w-6/15 flex flex-col items-end justify-center">
